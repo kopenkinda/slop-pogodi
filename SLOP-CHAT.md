@@ -2,9 +2,9 @@
 
 [Back to the README](README.md)
 
-The conversation that built Nu, Pogodi! 3D, recorded on October 2, 2026. This transcript runs from the first game request through the request to create this file.
+The conversation that built Nu, Pogodi! 3D, recorded on October 2, 2026. This transcript includes the original game, its new features, the documentation, and the custom README cover work below.
 
-User messages, assistant progress updates, and final replies are preserved in order. Tool output and agent setup instructions are omitted. All timestamps are UTC. Links and test counts reflect the project at the time of each message.
+User messages, assistant progress updates, and final replies are preserved in order. Tool output and agent setup instructions are omitted. All timestamps are UTC. Links and test counts reflect their original chat context.
 
 ## User, 01:54:52 UTC
 
@@ -137,3 +137,44 @@ User messages, assistant progress updates, and final replies are preserved in or
 ## User, 03:00:33 UTC
 
 > Great. Create a readme and also add our conversation here as a reference inside SLOP-CHAT.md
+
+## Assistant, 03:00:42 UTC
+
+> I’ll update the README with the game features, setup, and deployment details, then add SLOP-CHAT.md as a record of this conversation. I’m using the unslop skill to keep the writing plain and concise.
+
+## Assistant, 03:02:12 UTC
+
+> I found the saved chat log, so I can include the actual messages in SLOP-CHAT.md. I’ll link it from the README and leave out tool output and agent setup instructions.
+
+## Assistant, 03:05:06 UTC
+
+> The README now covers gameplay, controls, phone installation, offline behavior, setup, and deployment. SLOP-CHAT.md contains 31 original messages in order, including the feature requests and corrections. I’m checking the links and transcript before pushing both files.
+
+## Assistant, 03:06:25 UTC
+
+> Updated and pushed both files:
+>
+> - [README.md](/Users/dk/Documents/projects/slop/wolf/README.md): gameplay, setup, phone installation, and deployment.
+> - [SLOP-CHAT.md](/Users/dk/Documents/projects/slop/wolf/SLOP-CHAT.md): 31 original conversation messages, linked from the README.
+>
+> Transcript verified against the saved chat. Tests and deployment passed.
+
+## User, 03:08:23 UTC
+
+> nice. add a preview image (not just a screenshot, but create something) to put in the readme, make sure slop-chat reflects the conversation
+
+## Assistant, 03:08:30 UTC
+
+> I’ll create a custom illustrated banner for the README and update SLOP-CHAT.md with the latest messages. I’m using the imagegen skill for the artwork and unslop for the copy.
+
+## Assistant, 03:10:12 UTC
+
+> The built-in image generator isn’t available here, and its API fallback requires a configured API key. I’ll create a custom 3D cover using the game’s procedural art, with a new composition and title treatment.
+
+## Assistant, 03:14:35 UTC
+
+> The cover puts the wolf and a golden egg in the foreground, with four hens behind him and a day-to-night sky. I’m checking the composition and title readability before adding it to the README.
+
+## Assistant, 03:15:34 UTC
+
+> The cover is ready: a custom 1600 × 900 illustration, about 100 KB. I’m adding it as a clickable README banner and refreshing SLOP-CHAT.md from the saved conversation, including the documentation and artwork work.

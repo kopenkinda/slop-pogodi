@@ -1,5 +1,7 @@
 # Nu, Pogodi! 3D
 
+[![Nu, Pogodi! 3D cover art with the wolf, four hens, a golden egg, and a day-to-night sky.](docs/assets/preview.webp)](https://kopenkinda.github.io/slop-pogodi/)
+
 A 3D fan remake of the classic egg-catching game. Move the wolf's basket between four ramps and catch breakfast before it hits the ground.
 
 [Play the game](https://kopenkinda.github.io/slop-pogodi/) · [Read the build conversation](SLOP-CHAT.md)
