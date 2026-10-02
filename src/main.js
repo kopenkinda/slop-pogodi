@@ -41,11 +41,85 @@ let soundEnabled = readStorage("wolf-sound", "on") === "on";
 let audio,
   farm,
   feedbackTimer,
+  encoreTime = null,
   resumeAfterHelp = false,
   loadFailed = false,
   roundBestBefore = best;
 const formatScore = (value) => String(value).padStart(3, "0");
 bestEl.textContent = formatScore(best);
+
+let themeTurn = document.documentElement.dataset.theme === "dark" ? 180 : 0;
+$("#theme").innerHTML =
+  `<svg class="theme-dial" viewBox="0 0 40 40" aria-hidden="true">
+  <defs><clipPath id="theme-sky"><path d="M0 0h40v28H0Z"/></clipPath></defs>
+  <path class="theme-track" d="M5 27a15 15 0 0 1 30 0"/>
+  <g clip-path="url(#theme-sky)"><g class="theme-orbit">
+    <g class="dial-sun"><circle cx="20" cy="12" r="4"/><path d="M20 4v2m0 12v2M12 12h2m12 0h2M14.3 6.3l1.4 1.4m8.6 8.6 1.4 1.4m-11.4 0 1.4-1.4m8.6-8.6 1.4-1.4"/></g>
+    <path class="dial-moon" d="M24.8 43a6 6 0 0 1-7-8 6.5 6.5 0 1 0 7 8Z"/>
+  </g></g><path class="theme-horizon" d="M5 28h30"/>
+</svg>`;
+function updateTheme() {
+  const dark = document.documentElement.dataset.theme === "dark";
+  $("#theme").style.setProperty("--theme-turn", `${themeTurn}deg`);
+  $("#theme").setAttribute(
+    "aria-label",
+    `Switch to ${dark ? "light" : "dark"} mode`,
+  );
+  $("#theme").setAttribute("aria-pressed", String(dark));
+  $("meta[name='theme-color']").content = dark ? "#141c24" : "#f6f5ee";
+  farm?.setTheme(dark);
+}
+$("#theme").addEventListener("click", () => {
+  document.documentElement.dataset.theme =
+    document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  themeTurn -= 180;
+  saveStorage("wolf-theme", document.documentElement.dataset.theme);
+  updateTheme();
+});
+updateTheme();
+
+// Move the same controls into the game when it runs as an installed app.
+const standaloneDisplay = matchMedia("(display-mode: standalone)");
+function updateDisplayMode() {
+  const standalone = standaloneDisplay.matches || navigator.standalone === true;
+  document.documentElement.classList.toggle("standalone", standalone);
+  $(standalone ? "#game-actions" : "#page-actions").prepend(
+    $("#theme"),
+    $("#sound"),
+  );
+}
+standaloneDisplay.addEventListener("change", updateDisplayMode);
+updateDisplayMode();
+
+let installPrompt;
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  installPrompt = event;
+});
+window.addEventListener("appinstalled", () => {
+  installPrompt = null;
+  $("#install").hidden = true;
+});
+const installDialog = $("#install-dialog");
+$("#install").addEventListener("click", async () => {
+  game.pause();
+  if (installPrompt) {
+    await installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    installPrompt = null;
+    if (outcome === "accepted") $("#install").hidden = true;
+  } else {
+    const ios =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    $("#install-instructions").textContent = ios
+      ? 'Tap your browser\'s Share button, then "Add to Home Screen". Keep "Open as Web App" on if that option appears, and tap Add.'
+      : 'Open your browser\'s menu and choose "Install app" or "Add to Home Screen". On desktop, look for the install icon in the address bar.';
+    installDialog.showModal();
+  }
+});
+$("#close-install").addEventListener("click", () => installDialog.close());
+$("#install-done").addEventListener("click", () => installDialog.close());
 
 function unlockAudio() {
   if (!soundEnabled) return;
@@ -102,10 +176,11 @@ $("#sound").addEventListener("click", () => {
   }
 });
 
-function feedback(text, miss = false) {
+function feedback(text, miss = false, golden = false) {
   clearTimeout(feedbackTimer);
   $("#feedback").textContent = text;
-  $("#feedback").className = `feedback visible${miss ? " miss" : ""}`;
+  $("#feedback").className =
+    `feedback visible${miss ? " miss" : ""}${golden ? " golden" : ""}`;
   feedbackTimer = setTimeout(() => {
     $("#feedback").className = "feedback";
   }, 1000);
@@ -125,7 +200,10 @@ function updateStats() {
 }
 function updateState() {
   startPanel.hidden = game.state !== "ready";
-  overlay.hidden = game.state !== "paused" && game.state !== "over";
+  const encore = encoreTime !== null;
+  overlay.hidden = encore || (game.state !== "paused" && game.state !== "over");
+  $("#cinematic").hidden = !encore;
+  $("#stage").classList.toggle("is-encore", encore);
   $("#pause").disabled = game.state === "ready" || game.state === "over";
   $("#pause").setAttribute(
     "aria-label",
@@ -135,9 +213,10 @@ function updateState() {
     game.state === "paused"
       ? '<svg viewBox="0 0 24 24"><path d="m9 5 10 7-10 7Z"/></svg>'
       : '<svg viewBox="0 0 24 24"><path d="M8 6v12M16 6v12"/></svg>';
-  $("#round-label").textContent =
-    game.state === "ready"
-      ? "A DAY AT THE FARM"
+  $("#round-label").textContent = encore
+    ? "A SPECIAL DELIVERY"
+    : game.state === "ready"
+      ? "READY WHEN YOU ARE"
       : game.state === "paused"
         ? "ON A LITTLE BREAK"
         : game.state === "over"
@@ -161,7 +240,7 @@ function updateState() {
     $("#overlay-title").textContent =
       game.score === 0
         ? "A little egg practice?"
-        : `${game.score} eggs. Nice paws.`;
+        : `${game.score} points. Nice paws.`;
     $("#overlay-description").textContent =
       game.score === 0
         ? "Watch the eggs roll down, then move to the end of their ramp."
@@ -170,6 +249,13 @@ function updateState() {
     $("#restart").hidden = true;
   }
 }
+
+function finishEncore() {
+  if (encoreTime === null) return;
+  encoreTime = null;
+  updateState();
+}
+$("#skip-movie").addEventListener("click", finishEncore);
 
 const game = new EggGame({
   onEvent(event) {
@@ -185,11 +271,21 @@ const game = new EggGame({
       scoreEl.classList.add("score-pop");
       tone(740, 0.1);
       tone(990, 0.15, 0.07);
-      if (game.score % 10 === 0) {
-        feedback(`Level ${game.level}. Here come the hens!`);
+      if (event.levelUp) {
         updateState();
         tone(1320, 0.15, 0.16);
-      } else feedback("+1");
+      }
+      if (event.egg.golden) {
+        feedback(
+          event.levelUp ? `+5 GOLDEN! Level ${game.level}` : "+5 GOLDEN!",
+          false,
+          true,
+        );
+        tone(1480, 0.18, 0.14);
+        tone(1760, 0.22, 0.23);
+      } else if (event.levelUp)
+        feedback(`Level ${game.level}. Here come the hens!`);
+      else feedback("+1");
     } else if (event.type === "miss") {
       updateStats();
       feedback(
@@ -202,7 +298,15 @@ const game = new EggGame({
       tone(130, 0.2, 0.12, "triangle", 0.05);
     } else if (event.type === "spawn") {
       tone(440 + event.egg.lane * 55, 0.06, 0, "sine", 0.013);
+      if (event.egg.golden) {
+        feedback("Golden egg. Quick paws!", false, true);
+        tone(1100, 0.15, 0.06, "sine", 0.03);
+      }
     } else {
+      if (event.type === "over" && game.hasEncore) {
+        encoreTime = 0;
+        $("#movie-caption").textContent = "Someone heard about your score.";
+      }
       updateStats();
       updateState();
       if (event.type === "start") {
@@ -223,6 +327,8 @@ const game = new EggGame({
 function move(lane) {
   if (
     dialog.open ||
+    installDialog.open ||
+    encoreTime !== null ||
     game.state === "paused" ||
     game.state === "over" ||
     loadFailed
@@ -241,6 +347,7 @@ function move(lane) {
 function start() {
   if (loadFailed) return;
   unlockAudio();
+  encoreTime = null;
   roundBestBefore = best;
   game.start();
   move(1);
@@ -304,6 +411,7 @@ dialog.addEventListener("close", () => {
 document.addEventListener("keydown", (event) => {
   if (
     dialog.open ||
+    installDialog.open ||
     event.ctrlKey ||
     event.metaKey ||
     event.altKey ||
@@ -312,6 +420,13 @@ document.addEventListener("keydown", (event) => {
     return;
   if (["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)) return;
   const key = event.key.toLowerCase();
+  if (encoreTime !== null) {
+    if (key === " " || key === "escape") {
+      event.preventDefault();
+      finishEncore();
+    }
+    return;
+  }
   if (key === " " || key === "escape" || key === "p") {
     // Let Space activate a focused button using the browser's normal behavior.
     if (key === " " && event.target.closest("button, a")) return;
@@ -353,12 +468,29 @@ move(1);
 updateState();
 try {
   farm = createFarm($("#canvas-mount"));
+  updateTheme();
   let previous = performance.now();
   function frame(now) {
     const dt = Math.min((now - previous) / 1000, 0.1);
     previous = now;
     game.update(dt);
-    farm.render(game, dt, now / 1000);
+    if (
+      encoreTime !== null &&
+      !document.hidden &&
+      !dialog.open &&
+      !installDialog.open
+    ) {
+      const previousEncore = encoreTime;
+      encoreTime += dt;
+      if (previousEncore < 3.2 && encoreTime >= 3.2)
+        $("#movie-caption").textContent = "Hare mail. One very special egg.";
+      if (previousEncore < 5.4 && encoreTime >= 5.4) {
+        $("#movie-caption").textContent = "Even the hens are impressed.";
+        [660, 830, 990, 1320].forEach((note, i) => tone(note, 0.22, i * 0.13));
+      }
+      if (encoreTime >= 8.5) finishEncore();
+    }
+    farm.render(game, dt, now / 1000, encoreTime);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

@@ -17,6 +17,9 @@ export class EggGame {
   get level() {
     return 1 + Math.floor(this.score / 10);
   }
+  get hasEncore() {
+    return this.state === "over" && this.score > 50;
+  }
   get speed() {
     return Math.min(0.42, 0.18 + (this.level - 1) * 0.018);
   }
@@ -73,14 +76,19 @@ export class EggGame {
       let lane = Math.floor(this.random() * 4);
       if (lane === this.lastLane)
         lane = (lane + 1 + Math.floor(this.random() * 3)) % 4;
-      const egg = { id: this.nextId++, lane, progress: 0 };
+      const egg = {
+        id: this.nextId++,
+        lane,
+        progress: 0,
+        golden: this.random() < 0.05,
+      };
       this.eggs.push(egg);
       this.lastLane = lane;
       this.spawnIn += this.spawnInterval;
       this.onEvent({ type: "spawn", egg });
     }
     for (const egg of [...this.eggs]) {
-      egg.progress += dt * this.speed;
+      egg.progress += dt * this.speed * (egg.golden ? 2 : 1);
       // A small catch window makes moving to the basket feel forgiving.
       if (
         egg.progress >= 0.94 &&
@@ -88,8 +96,16 @@ export class EggGame {
         egg.lane === this.lane
       ) {
         this.eggs = this.eggs.filter((item) => item.id !== egg.id);
-        this.score++;
-        this.onEvent({ type: "catch", egg, score: this.score });
+        const points = egg.golden ? 5 : 1;
+        const previousLevel = this.level;
+        this.score += points;
+        this.onEvent({
+          type: "catch",
+          egg,
+          score: this.score,
+          points,
+          levelUp: this.level > previousLevel,
+        });
       } else if (egg.progress > 1.1) {
         this.eggs = this.eggs.filter((item) => item.id !== egg.id);
         this.misses++;

@@ -2,8 +2,35 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <meta name="theme-color" content="#f4f3eb" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="Nu, Pogodi!" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
+    <script>
+      let savedTheme;
+      try {
+        savedTheme = localStorage.getItem("wolf-theme");
+      } catch {}
+      document.documentElement.dataset.theme =
+        savedTheme === "dark" || savedTheme === "light"
+          ? savedTheme
+          : matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+      document.documentElement.classList.toggle(
+        "standalone",
+        matchMedia("(display-mode: standalone)").matches ||
+          navigator.standalone === true,
+      );
+    </script>
     <meta
       name="description"
       content="Quick paws, four hens, and a basket. Play a 3D reimagining of the classic Nu, Pogodi! egg-catching game."
@@ -18,16 +45,28 @@
           ><span class="brand-mark">●</span> NU, POGODI!
           <span class="edition">3D</span></a
         >
-        <nav aria-label="Game options">
+        <nav id="page-actions" aria-label="Game options">
+          <button
+            id="theme"
+            class="quiet-button theme-button"
+            aria-label="Switch to dark mode"
+            aria-pressed="false"
+          ></button>
           <button
             id="sound"
             class="quiet-button"
             aria-label="Turn sound off"
             aria-pressed="true"
-          ></button
-          ><span class="nav-divider"></span
+          ></button>
+          <button id="install" class="quiet-button" aria-label="Install game">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4" /></svg
+            ><span class="install-label">Install</span>
+          </button>
+          <span class="nav-divider"></span
           ><button id="help" class="quiet-button">
-            <span class="help-icon">?</span> How to play
+            <span class="help-icon">?</span>
+            <span class="help-label">How to play</span>
           </button>
         </nav>
       </header>
@@ -43,7 +82,7 @@
           <div class="game-hud">
             <div class="stats">
               <div class="stat">
-                <span class="stat-label">EGGS CAUGHT</span
+                <span class="stat-label">SCORE</span
                 ><strong id="score">000</strong>
               </div>
               <span class="stat-divider"></span>
@@ -66,14 +105,16 @@
               <div class="stat-label">EGGS TO SPARE</div>
               <div id="lives" aria-label="3 lives remaining"></div>
             </div>
-            <button
-              id="pause"
-              class="icon-button"
-              aria-label="Pause game"
-              disabled
-            >
-              <svg viewBox="0 0 24 24"><path d="M8 6v12M16 6v12" /></svg>
-            </button>
+            <div id="game-actions" class="game-actions">
+              <button
+                id="pause"
+                class="icon-button"
+                aria-label="Pause game"
+                disabled
+              >
+                <svg viewBox="0 0 24 24"><path d="M8 6v12M16 6v12" /></svg>
+              </button>
+            </div>
           </div>
           <div id="stage" class="stage">
             <div class="scene-tag">
@@ -81,6 +122,15 @@
             </div>
             <div id="canvas-mount"></div>
             <div id="feedback" class="feedback" aria-live="polite"></div>
+            <div id="cinematic" class="cinematic" hidden>
+              <span class="cinematic-title">A LITTLE SOMETHING EXTRA</span>
+              <button id="skip-movie" aria-label="Skip movie">
+                Skip <span>→</span>
+              </button>
+              <p id="movie-caption" aria-live="polite">
+                Someone heard about your score.
+              </p>
+            </div>
             <div class="lane-controls left-controls">
               <button data-lane="0" aria-label="Catch upper left">
                 <span>↖</span><kbd>Q</kbd></button
@@ -98,7 +148,7 @@
             <div id="start-panel" class="start-panel">
               <div class="start-copy">
                 <strong>A basketful of good old days.</strong
-                ><span>Catch the eggs. Mind the chickens.</span>
+                ><span>Golden eggs are worth 5. Catch them quick.</span>
               </div>
               <button id="start" class="primary-button">
                 <svg viewBox="0 0 24 24"><path d="m9 5 10 7-10 7Z" /></svg>
@@ -189,14 +239,36 @@
         four on-screen buttons.
       </p>
       <p>
-        Each catch earns one point. Three missed eggs end the round. The hens
-        get faster every ten catches.
+        White eggs earn 1 point. Rare golden eggs earn 5 points and move twice
+        as fast. They have a 5% chance of appearing. Three missed eggs end the
+        round. The hens get faster every ten points.
       </p>
       <div class="help-note">
         <kbd>SPACE</kbd> Start / pause <span>·</span> <kbd>ESC</kbd> Pause
       </div>
       <button id="got-it" class="primary-button">
         Got it. Let's catch some eggs. <span>→</span>
+      </button>
+    </dialog>
+    <dialog id="install-dialog" aria-labelledby="install-title">
+      <button
+        id="close-install"
+        class="close-button"
+        aria-label="Close installation instructions"
+      >
+        ×
+      </button>
+      <span class="eyebrow">A POCKET-SIZED FARM</span>
+      <h2 id="install-title">Take the hens with you.</h2>
+      <p id="install-instructions">
+        Open your browser's menu and choose Install app or Add to Home Screen.
+      </p>
+      <p>
+        The installed game opens with just the farm and its controls. After your
+        first visit, it works offline too.
+      </p>
+      <button id="install-done" class="primary-button">
+        Got it <span>→</span>
       </button>
     </dialog>
     <script type="module" src="/src/main.js"></script>

@@ -19,6 +19,7 @@ const palette = {
   shirt: "#bb7f77",
   pants: "#67798b",
   egg: "#fff6dc",
+  gold: "#ffc139",
 };
 
 export const LANES = [
@@ -54,7 +55,8 @@ export function createFarm(mount) {
     "A 3D farm with four hens, wooden egg ramps, and a wolf holding a wicker basket. Use Q, A, E and D or the on-screen arrows to catch eggs.",
   );
 
-  scene.add(new THREE.HemisphereLight("#fff9e4", "#8e9c73", 1.9));
+  const ambient = new THREE.HemisphereLight("#fff9e4", "#8e9c73", 1.9);
+  scene.add(ambient);
   const sun = new THREE.DirectionalLight("#fff4d7", 2.7);
   sun.position.set(-7, 14, 8);
   sun.castShadow = true;
@@ -489,6 +491,93 @@ export function createFarm(mount) {
 
   batchStatic(scene, new Set(hens.map((hen) => hen.mesh)));
 
+  const nightSky = new THREE.Group();
+  scene.add(nightSky);
+  const moon = new THREE.Mesh(
+    geometry.smooth,
+    new THREE.MeshBasicMaterial({ color: "#e1e9cc" }),
+  );
+  moon.scale.setScalar(0.28);
+  scene.add(moon);
+  const sunOrb = new THREE.Mesh(
+    geometry.smooth,
+    new THREE.MeshBasicMaterial({ color: "#ffd270" }),
+  );
+  sunOrb.scale.setScalar(0.28);
+  const halo = new THREE.Mesh(
+    new THREE.TorusGeometry(1.5, 0.035, 5, 32),
+    new THREE.MeshBasicMaterial({
+      color: "#edbd5a",
+      transparent: true,
+      opacity: 0.5,
+    }),
+  );
+  sunOrb.add(halo);
+  scene.add(sunOrb);
+  const stars = new Float32Array(36 * 3);
+  for (let i = 0; i < 36; i++)
+    stars.set([(rand() - 0.5) * 16, 3.0 + rand() * 1.1, -4.7], i * 3);
+  const starGeometry = new THREE.BufferGeometry();
+  starGeometry.setAttribute("position", new THREE.BufferAttribute(stars, 3));
+  const starMaterial = new THREE.PointsMaterial({
+    color: "#dce9ee",
+    size: 0.045,
+    sizeAttenuation: true,
+    transparent: true,
+  });
+  nightSky.add(new THREE.Points(starGeometry, starMaterial));
+  const windowLight = new THREE.PointLight("#ffc276", 3, 5);
+  windowLight.position.set(0, 2.6, -2.1);
+  nightSky.add(windowLight);
+  nightSky.visible = false;
+
+  let themeInitialized = false,
+    nightAmount = 0,
+    nightStart = 0,
+    nightTarget = 0;
+  let orbit = 0,
+    orbitStart = 0,
+    orbitTarget = 0,
+    themeElapsed = 1.5;
+  const mixedColor = new THREE.Color();
+  function paintDaylight() {
+    const blend = (color, day, night) =>
+      color.set(day).lerp(mixedColor.set(night), nightAmount);
+    blend(scene.background, "#d4ddc0", "#14212f");
+    scene.fog.color.copy(scene.background);
+    ground.material.color.copy(scene.background);
+    blend(ambient.color, "#fff9e4", "#91b3dc");
+    blend(ambient.groundColor, "#8e9c73", "#25394d");
+    ambient.intensity = THREE.MathUtils.lerp(1.9, 0.95, nightAmount);
+    blend(sun.color, "#fff4d7", "#9dc5ff");
+    sun.intensity = THREE.MathUtils.lerp(2.7, 1.15, nightAmount);
+    blend(fill.color, "#eaf1dd", "#bdccb0");
+    fill.intensity = THREE.MathUtils.lerp(0.8, 0.3, nightAmount);
+    material("#626f5d").emissive.set("#ffd48d");
+    material("#626f5d").emissiveIntensity = 1.3 * nightAmount;
+    material(palette.egg).emissive.set("#8499b3");
+    material(palette.egg).emissiveIntensity = 0.2 * nightAmount;
+    nightSky.visible = nightAmount > 0.001;
+    starMaterial.opacity = nightAmount;
+    windowLight.intensity = 3 * nightAmount;
+    // Both bodies travel around the same circle, half a turn apart.
+    const angle = 2.3 + orbit;
+    sunOrb.position.set(Math.cos(angle) * 4, 0.3 + Math.sin(angle) * 4, -4.4);
+    moon.position.set(
+      Math.cos(angle + Math.PI) * 4,
+      0.3 + Math.sin(angle + Math.PI) * 4,
+      -4.4,
+    );
+    sunOrb.visible = sunOrb.position.y > 0.1;
+    moon.visible = moon.position.y > 0.1;
+  }
+
+  const goldMaterial = material(palette.gold);
+  goldMaterial.metalness = 0.45;
+  goldMaterial.roughness = 0.28;
+  goldMaterial.emissive.set("#d58a08");
+  goldMaterial.emissiveIntensity = 0.45;
+
   const wolf = new THREE.Group();
   wolf.position.set(-0.16, 0, 1.12);
   scene.add(wolf);
@@ -627,14 +716,72 @@ export function createFarm(mount) {
   const targetWolf = new THREE.Vector3();
   basket.position.set(-1.45, 0.95, 1.5);
 
+  // A small, original rabbit cameo for the bonus ending.
+  const rabbit = new THREE.Group();
+  scene.add(rabbit);
+  for (const side of [-1, 1]) {
+    ball("#e1e0cb", [side * 0.19, 0.12, 0.16], [0.19, 0.12, 0.27], rabbit);
+    ball("#dbe1ca", [side * 0.29, 0.76, 0.18], [0.12, 0.25, 0.13], rabbit);
+  }
+  ball("#79a889", [0, 0.68, 0], [0.33, 0.45, 0.25], rabbit);
+  ball("#dce0cd", [0, 1.27, 0.02], [0.34, 0.35, 0.3], rabbit);
+  ball("#f0eedb", [0, 1.1, 0.28], [0.22, 0.14, 0.13], rabbit);
+  ball("#c98983", [0, 1.2, 0.35], [0.065, 0.045, 0.045], rabbit);
+  ball("#f0edda", [0, 0.48, -0.27], [0.16, 0.16, 0.16], rabbit);
+  for (const side of [-1, 1]) {
+    const ear = ball(
+      "#dce0cd",
+      [side * 0.17, 1.9, -0.03],
+      [0.115, 0.48, 0.11],
+      rabbit,
+    );
+    ear.rotation.z = -side * 0.12;
+    const inner = ball(
+      "#cfa39b",
+      [side * 0.17, 1.92, 0.06],
+      [0.055, 0.33, 0.035],
+      rabbit,
+    );
+    inner.rotation.z = -side * 0.12;
+    ball("cream", [side * 0.135, 1.36, 0.27], [0.1, 0.13, 0.045], rabbit);
+    ball("dark", [side * 0.125, 1.35, 0.307], [0.035, 0.065, 0.025], rabbit);
+    box("cream", [side * 0.045, 1.035, 0.355], [0.07, 0.12, 0.04], rabbit);
+  }
+  batchStatic(rabbit);
+  rabbit.visible = false;
+
   const eggMeshes = new Map(),
     particles = [],
     fallingEggs = [];
-  function eggMesh() {
-    return shape("egg", "egg", [0, 0, 0], [0.155, 0.155, 0.155]);
+  function eggMesh(golden = false) {
+    const size = golden ? 0.19 : 0.155;
+    const mesh = shape(
+      "egg",
+      golden ? "gold" : "egg",
+      [0, 0, 0],
+      [size, size, size],
+    );
+    if (golden) {
+      const sparkles = new THREE.Group();
+      mesh.add(sparkles);
+      for (let i = 0; i < 4; i++) {
+        const angle = (i * Math.PI) / 2;
+        shape(
+          "sphere",
+          "gold",
+          [Math.cos(angle) * 1.8, Math.sin(angle) * 1.8, 0.15],
+          [0.12, 0.2, 0.12],
+          sparkles,
+        );
+      }
+    }
+    return mesh;
   }
+  const gift = eggMesh(true);
+  gift.visible = false;
+  let encoreCelebrated = false;
   const previewEggs = [0, 1, 2, 3].map((lane, i) => ({
-    mesh: eggMesh(),
+    mesh: eggMesh(i === 2),
     lane,
     offset: [0.38, 0.68, 0.72, 0.18][i],
   }));
@@ -658,10 +805,10 @@ export function createFarm(mount) {
     if (t > 1) mesh.position.y -= Math.pow((t - 1) * 8, 2) * 0.1;
     mesh.rotation.set(time * 2, 0, time * (lane < 2 ? -2.6 : 2.6));
   }
-  function burst(pos, caught) {
-    for (let i = 0; i < (caught ? 5 : 9); i++) {
+  function burst(pos, caught, golden = false) {
+    for (let i = 0; i < (golden ? 14 : caught ? 5 : 9); i++) {
       const mesh = ball(
-        caught ? "#efd389" : i % 2 ? "egg" : "#e5b148",
+        golden ? "gold" : caught ? "#efd389" : i % 2 ? "egg" : "#e5b148",
         [pos[0], pos[1] + 0.2, pos[2]],
         [caught ? 0.045 : 0.075, 0.05, 0.05],
       );
@@ -698,33 +845,101 @@ export function createFarm(mount) {
   resize();
 
   return {
-    render(game, dt, time) {
+    setTheme(dark) {
+      const next = dark ? 1 : 0;
+      if (!themeInitialized || reducedMotion) {
+        themeInitialized = true;
+        nightAmount = nightTarget = next;
+        orbit = orbitTarget = dark ? Math.PI : 0;
+        themeElapsed = 1.5;
+        paintDaylight();
+      } else if (next !== nightTarget) {
+        nightStart = nightAmount;
+        nightTarget = next;
+        orbitStart = orbit;
+        orbitTarget += Math.PI;
+        themeElapsed = 0;
+      }
+    },
+    render(game, dt, time, encoreTime = null) {
+      if (themeElapsed < 1.5) {
+        themeElapsed = Math.min(1.5, themeElapsed + dt);
+        const ease = THREE.MathUtils.smoothstep(themeElapsed, 0, 1.5);
+        nightAmount = THREE.MathUtils.lerp(nightStart, nightTarget, ease);
+        orbit = THREE.MathUtils.lerp(orbitStart, orbitTarget, ease);
+        paintDaylight();
+      }
+      const encore = encoreTime !== null;
+      const movieTime = reducedMotion && encore ? 6 : encoreTime;
       const idle = game.state === "ready";
       const animate = game.state === "playing" || idle;
       const smoothing = 1 - Math.exp(-dt * 17);
       const lane = LANES[game.lane];
       targetBasket.set(lane.end[0], lane.end[1] + 0.09, lane.end[2]);
+      if (encore) targetBasket.set(0, 1.3, 2.35);
       basket.position.lerp(targetBasket, smoothing);
       catchBounce = Math.max(0, catchBounce - dt * 4);
       basket.rotation.z =
         (game.lane < 2 ? -0.05 : 0.05) + Math.sin(catchBounce * Math.PI) * 0.1;
       targetWolf.set(game.lane < 2 ? -0.25 : 0.25, 0, 1.12);
+      if (encore) targetWolf.set(-0.15, 0, 1.65);
       wolf.position.lerp(targetWolf, smoothing);
+      const cheer =
+        encore && movieTime > 5.4 && !reducedMotion
+          ? Math.abs(Math.sin((movieTime - 5.4) * 5)) * 0.08
+          : 0;
       const breathe =
-        !reducedMotion && animate ? Math.sin(time * 2.5) * 0.025 : 0;
+        cheer + (!reducedMotion && animate ? Math.sin(time * 2.5) * 0.025 : 0);
       torso.position.y = breathe;
       torso.rotation.z = THREE.MathUtils.lerp(
         torso.rotation.z,
-        game.lane < 2 ? -0.065 : 0.065,
+        encore ? 0 : game.lane < 2 ? -0.065 : 0.065,
         smoothing,
       );
       head.rotation.y = THREE.MathUtils.lerp(
         head.rotation.y,
-        game.lane < 2 ? -0.27 : 0.27,
+        encore ? 0.25 : game.lane < 2 ? -0.27 : 0.27,
         smoothing,
       );
       tail.rotation.z +=
         !reducedMotion && animate ? Math.sin(time * 3) * 0.0009 : 0;
+      head.rotation.x =
+        encore && movieTime > 3.2 && movieTime < 5.4 ? -0.16 : 0;
+      rabbit.visible = gift.visible = encore;
+      if (encore) {
+        const arrival = THREE.MathUtils.smoothstep(movieTime, 0.8, 3.2);
+        rabbit.position.set(
+          6.8 - arrival * 5.1,
+          arrival > 0 && arrival < 1 && !reducedMotion
+            ? Math.abs(Math.sin(movieTime * 10)) * 0.2
+            : 0,
+          2.4,
+        );
+        rabbit.rotation.set(
+          0,
+          -0.35,
+          !reducedMotion && movieTime > 5.4
+            ? Math.sin((movieTime - 5.4) * 3) * 0.08
+            : 0,
+        );
+        const toss = THREE.MathUtils.clamp((movieTime - 3.2) / 2.2, 0, 1);
+        gift.scale.setScalar(0.32);
+        gift.position.set(
+          THREE.MathUtils.lerp(rabbit.position.x - 0.3, 0, toss),
+          THREE.MathUtils.lerp(1.1, 1.5, toss) + Math.sin(toss * Math.PI) * 2,
+          2.5,
+        );
+        gift.rotation.z = reducedMotion ? 0 : toss * Math.PI * 2;
+        if (movieTime >= 5.4 && !encoreCelebrated) {
+          encoreCelebrated = true;
+          if (!reducedMotion) burst([0, 1.6, 2.35], true, true);
+        }
+      } else encoreCelebrated = false;
+      const zoom = encore && !reducedMotion ? 1.3 : 1;
+      if (Math.abs(camera.zoom - zoom) > 0.001) {
+        camera.zoom = THREE.MathUtils.lerp(camera.zoom, zoom, smoothing * 0.15);
+        camera.updateProjectionMatrix();
+      }
       const leftShoulder = new THREE.Vector3(
         wolf.position.x - 0.36,
         1.65 + breathe,
@@ -753,7 +968,8 @@ export function createFarm(mount) {
         hen.mesh.position.y =
           hen.y +
           (!reducedMotion && animate ? Math.sin(time * 2 + i * 2) * 0.025 : 0) +
-          Math.sin(hen.excitement * Math.PI) * 0.12;
+          Math.sin(hen.excitement * Math.PI) * 0.12 +
+          cheer * 1.5;
       }
       for (const preview of previewEggs) {
         preview.mesh.visible = idle;
@@ -774,12 +990,13 @@ export function createFarm(mount) {
           eggMeshes.delete(id);
         }
       for (const egg of game.eggs) {
-        if (!eggMeshes.has(egg.id)) eggMeshes.set(egg.id, eggMesh());
+        if (!eggMeshes.has(egg.id)) eggMeshes.set(egg.id, eggMesh(egg.golden));
+        eggMeshes.get(egg.id).visible = !encore;
         eggPosition(
           eggMeshes.get(egg.id),
           egg.lane,
           egg.progress,
-          game.elapsed,
+          game.elapsed * (egg.golden ? 2 : 1),
         );
       }
       for (let i = fallingEggs.length - 1; i >= 0; i--) {
@@ -830,11 +1047,11 @@ export function createFarm(mount) {
       if (event.type === "spawn") hens[event.egg.lane].excitement = 1;
       if (event.type === "catch") {
         catchBounce = 1;
-        burst(LANES[event.egg.lane].end, true);
+        burst(LANES[event.egg.lane].end, true, event.egg.golden);
       }
       if (event.type === "miss") {
         missShake = 1;
-        const mesh = eggMesh(),
+        const mesh = eggMesh(event.egg.golden),
           direction = event.egg.lane < 2 ? 1 : -1;
         mesh.position.set(...LANES[event.egg.lane].end);
         mesh.position.x += direction * 0.3;

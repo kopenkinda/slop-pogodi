@@ -13,7 +13,7 @@ test("an egg is caught only at its ramp end, with the correct basket position", 
   for (let lane = 0; lane < 4; lane++) {
     const events = [];
     const game = new EggGame({
-      random: () => (lane + 0.1) / 4,
+      random: () => (lane + 0.3) / 4,
       onEvent: (event) => events.push(event),
     });
     game.start();
@@ -28,6 +28,62 @@ test("an egg is caught only at its ramp end, with the correct basket position", 
     assert.equal(game.score, 1);
     assert.equal(game.misses, 0);
     assert.equal(events.find((event) => event.type === "catch").egg.lane, lane);
+  }
+});
+
+test("golden eggs use a 5% chance and travel twice as fast as white eggs", () => {
+  const golden = new EggGame({ random: () => 0.049 });
+  const white = new EggGame({ random: () => 0.05 });
+  golden.start();
+  white.start();
+  advance(golden, 1.5);
+  advance(white, 1.5);
+  assert.equal(golden.eggs[0].golden, true);
+  assert.equal(white.eggs[0].golden, false);
+  assert.ok(
+    Math.abs(golden.eggs[0].progress - white.eggs[0].progress * 2) < 0.0001,
+  );
+  golden.move(0);
+  advance(golden, 1.9);
+  assert.equal(golden.score, 5);
+  assert.equal(golden.misses, 0);
+});
+
+test("a five-point catch reports crossing a level, and a missed golden egg costs one life", () => {
+  const events = [];
+  const game = new EggGame({
+    random: () => 0.01,
+    onEvent: (event) => events.push(event),
+  });
+  game.start();
+  game.score = 8;
+  game.move(0);
+  advance(game, 3.3);
+  assert.equal(game.score, 13);
+  assert.equal(game.level, 2);
+  const caught = events.find((event) => event.type === "catch");
+  assert.equal(caught.points, 5);
+  assert.equal(caught.levelUp, true);
+  game.start();
+  game.move(3);
+  advance(game, 3.8);
+  assert.equal(game.score, 0);
+  assert.equal(game.misses, 1);
+});
+
+test("the bonus ending unlocks only after losing with more than 50 points and resets on replay", () => {
+  for (const score of [50, 51]) {
+    const game = new EggGame({ random: () => 0.4 });
+    game.start();
+    game.score = score;
+    assert.equal(game.hasEncore, false);
+    advance(game, 20, () => {
+      if (game.eggs.length) game.move((game.eggs[0].lane + 2) % 4);
+    });
+    assert.equal(game.state, "over");
+    assert.equal(game.hasEncore, score > 50);
+    game.start();
+    assert.equal(game.hasEncore, false);
   }
 });
 

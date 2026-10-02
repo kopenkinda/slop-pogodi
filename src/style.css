@@ -1,9 +1,24 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/dm-sans.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/space-grotesk.woff2") format("woff2");
+}
 
 :root {
   font-family: "DM Sans", sans-serif;
-  color: #343a2a;
-  background: #f6f5ee;
+  color: var(--ink);
+  background: var(--page);
+  color-scheme: light;
+  --page: #f6f5ee;
   font-synthesis: none;
   font-weight: 450;
   --ink: #343a2a;
@@ -1206,4 +1221,445 @@ dialog .primary-button {
     display: inline;
     font-size: 6px;
   }
+}
+
+.game-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.theme-button {
+  justify-content: center;
+  min-width: 26px;
+}
+.feedback.golden {
+  color: #af7613;
+  text-shadow: 0 1px 12px #fff0c4;
+  white-space: nowrap;
+}
+.cinematic {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  color: #f5edce;
+}
+.cinematic::before,
+.cinematic::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 37px;
+  background: #10181c;
+}
+.cinematic::before {
+  top: 0;
+}
+.cinematic::after {
+  bottom: 0;
+}
+.cinematic-title {
+  position: absolute;
+  top: 14px;
+  left: 22px;
+  font-size: 8px;
+  letter-spacing: 2px;
+  z-index: 1;
+}
+#skip-movie {
+  position: absolute;
+  right: 16px;
+  top: 4px;
+  pointer-events: auto;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #f5edce;
+  padding: 8px 10px;
+  font-size: 10px;
+  z-index: 1;
+}
+#skip-movie span {
+  margin-left: 9px;
+}
+#movie-caption {
+  position: absolute;
+  bottom: 39px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 32px);
+  text-align: center;
+  background: #10181ce6;
+  border: 1px solid #dce5c629;
+  border-radius: 7px;
+  padding: 11px 17px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.is-encore .lane-controls,
+.is-encore .scene-tag,
+.is-encore .feedback {
+  visibility: hidden;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #141c24;
+  --ink: #e6eadf;
+  --muted: #a0ac9e;
+  --line: #303e42;
+  --olive: #aaba8c;
+}
+[data-theme="dark"] .brand-mark {
+  background: #343125;
+  border-color: #b48b4b;
+}
+[data-theme="dark"] .edition {
+  color: #adba97;
+  border-color: #4c5a4e;
+}
+[data-theme="dark"] h1 em,
+[data-theme="dark"] .best-stat strong {
+  color: #b0bf8f;
+}
+[data-theme="dark"] .intro p,
+[data-theme="dark"] .stat-label,
+[data-theme="dark"] .game-bottom,
+[data-theme="dark"] .instructions p > span,
+[data-theme="dark"] footer,
+[data-theme="dark"] .start-copy > span,
+[data-theme="dark"] .overlay-card p,
+[data-theme="dark"] dialog p,
+[data-theme="dark"] .help-note,
+[data-theme="dark"] .text-button {
+  color: var(--muted);
+}
+[data-theme="dark"] .eyebrow,
+[data-theme="dark"] .scene-tag,
+[data-theme="dark"] .hud-center,
+[data-theme="dark"] .footer-flower,
+[data-theme="dark"] .key-guide > div,
+[data-theme="dark"] .close-button {
+  color: #a4b7a0;
+}
+[data-theme="dark"] .game-shell {
+  background: #1c282e;
+  border-color: #334344;
+  box-shadow: 0 8px 30px #0002;
+}
+[data-theme="dark"] .stage {
+  background: #14212f;
+}
+[data-theme="dark"] .icon-button {
+  border-color: #455755;
+}
+[data-theme="dark"] #lives svg {
+  stroke: #b0c09c;
+  fill: #344839;
+}
+[data-theme="dark"] .lane-controls button {
+  background: #1e3135dc;
+  border-color: #48605d;
+  box-shadow: 0 3px 0 #0b161c80;
+}
+[data-theme="dark"] .lane-controls button > span,
+[data-theme="dark"] .lane-controls button kbd {
+  color: #c1d5b0;
+}
+[data-theme="dark"] .lane-controls button:hover {
+  background: #314a48;
+}
+[data-theme="dark"] .lane-controls button.active {
+  background: #4c422b;
+  border-color: #c4a15e;
+}
+[data-theme="dark"] .lane-controls button.active > span {
+  color: #ffcd77;
+}
+[data-theme="dark"] .start-panel {
+  background: #213036f2;
+  border-color: #4a5a5260;
+  box-shadow: 0 7px 35px #0003;
+}
+[data-theme="dark"] .instruction-icon,
+[data-theme="dark"] kbd {
+  color: #bbcca6;
+  background: #24332f;
+  border-color: #405348;
+  box-shadow: none;
+}
+[data-theme="dark"] .overlay {
+  background: #0b141b80;
+}
+[data-theme="dark"] .overlay-card,
+[data-theme="dark"] dialog {
+  background: #202d33;
+  border-color: #43534f;
+  box-shadow: 0 20px 60px #0004;
+}
+[data-theme="dark"] dialog::backdrop {
+  background: #07101799;
+}
+[data-theme="dark"] .feedback {
+  color: #c7e5a3;
+  text-shadow: 0 1px 12px #14212f;
+}
+[data-theme="dark"] .feedback.miss {
+  color: #f4ad85;
+}
+[data-theme="dark"] .feedback.golden {
+  color: #ffd777;
+  text-shadow: 0 1px 18px #bd7b2870;
+}
+[data-theme="dark"] .load-error {
+  background: #213036;
+}
+
+/* Installed apps devote the entire screen to the game. */
+.standalone,
+.standalone body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.standalone #app {
+  height: 100dvh;
+  max-width: none;
+  padding: 0;
+}
+.standalone .site-header,
+.standalone .intro,
+.standalone .instructions,
+.standalone footer,
+.standalone .game-bottom {
+  display: none;
+}
+.standalone main,
+.standalone .game-shell {
+  height: 100%;
+}
+.standalone .game-shell {
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  border-radius: 0;
+}
+.standalone .game-hud {
+  height: auto;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: max(14px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right)) 12px
+    max(20px, env(safe-area-inset-left));
+}
+.standalone .stats {
+  grid-area: 1 / 1;
+}
+.standalone .game-actions {
+  grid-area: 1 / 2;
+  gap: 6px;
+}
+.standalone .game-actions button {
+  min-width: 42px;
+  height: 42px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+}
+.standalone .game-actions svg {
+  width: 18px;
+  height: 18px;
+}
+.standalone .sound-label {
+  display: none;
+}
+.standalone .life-group {
+  grid-area: 2 / 1;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+}
+.standalone .hud-center {
+  grid-area: 2 / 2;
+  display: flex;
+  visibility: visible;
+  font-size: 7px;
+  justify-content: flex-end;
+}
+.standalone #lives {
+  height: 18px;
+  gap: 5px;
+}
+.standalone #lives svg {
+  width: 12px;
+  height: 18px;
+}
+.standalone .stage {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+.standalone .scene-tag {
+  top: 18px;
+  left: 20px;
+}
+.standalone .lane-controls {
+  top: auto;
+  bottom: max(28px, env(safe-area-inset-bottom));
+  gap: 16px;
+}
+.standalone .left-controls {
+  left: max(24px, env(safe-area-inset-left));
+}
+.standalone .right-controls {
+  right: max(24px, env(safe-area-inset-right));
+}
+.standalone .lane-controls button {
+  width: 68px;
+  height: 64px;
+  border-radius: 15px;
+}
+.standalone .lane-controls button > span {
+  font-size: 32px;
+}
+.standalone .lane-controls kbd {
+  display: none;
+}
+.standalone .start-panel {
+  bottom: calc(max(28px, env(safe-area-inset-bottom)) + 26px);
+  max-width: calc(100% - 208px);
+  width: 240px;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.standalone .start-copy {
+  display: none;
+}
+.standalone .start-panel .primary-button {
+  width: 100%;
+  min-height: 52px;
+}
+.standalone .start-panel .primary-button > span {
+  display: none;
+}
+.standalone .start-panel .primary-button svg {
+  margin-right: 0;
+}
+.standalone #movie-caption {
+  bottom: calc(39px + env(safe-area-inset-bottom));
+}
+
+@media (max-width: 500px) {
+  nav {
+    gap: 10px;
+  }
+  #install .install-label {
+    display: none;
+  }
+  .feedback {
+    font-size: 15px;
+  }
+  #movie-caption {
+    font-size: 10px;
+  }
+}
+@media (max-width: 380px) {
+  .help-label,
+  nav .nav-divider {
+    display: none;
+  }
+  .standalone .game-hud {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .standalone .game-actions {
+    gap: 4px;
+  }
+  .standalone .game-actions button {
+    min-width: 38px;
+    height: 38px;
+  }
+  .standalone .start-panel {
+    max-width: calc(100% - 184px);
+  }
+  .standalone .left-controls {
+    left: 14px;
+  }
+  .standalone .right-controls {
+    right: 14px;
+  }
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  .standalone .game-hud {
+    display: flex;
+    height: 68px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .standalone .life-group {
+    margin-left: auto;
+  }
+  .standalone .hud-center {
+    display: none;
+  }
+  .standalone .lane-controls {
+    top: 34%;
+    bottom: auto;
+    gap: 12px;
+  }
+  .standalone .lane-controls button {
+    width: 54px;
+    height: 48px;
+  }
+  .standalone .start-panel {
+    bottom: 18px;
+    width: 180px;
+  }
+}
+
+.theme-button .theme-dial,
+.standalone .game-actions .theme-dial {
+  width: 30px;
+  height: 30px;
+  overflow: visible;
+}
+.theme-track {
+  opacity: 0.22;
+  stroke-dasharray: 1 3;
+  stroke-width: 1;
+}
+.theme-horizon {
+  opacity: 0.5;
+  stroke-width: 1.2;
+}
+.theme-orbit {
+  transform-origin: 20px 27px;
+  transform: rotate(var(--theme-turn, 0deg));
+  transition: transform 1500ms cubic-bezier(0.45, 0, 0.2, 1);
+}
+.dial-sun {
+  color: #c58d36;
+  stroke-width: 1.4;
+}
+.dial-sun circle {
+  fill: #ecc373;
+}
+.dial-moon {
+  fill: #b6cbdc;
+  stroke: #809eb9;
+  stroke-width: 1.2;
+}
+[data-theme="dark"] .dial-moon {
+  fill: #dce6e5;
+  stroke: #dce6e5;
 }
