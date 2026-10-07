@@ -17,7 +17,7 @@ export default defineConfig({
         name: "Nu, Pogodi! 3D",
         short_name: "Nu, Pogodi!",
         description:
-          "Catch the eggs. Mind the chickens. A 3D arcade game for quick paws.",
+          "A 3D remake of the Elektronika egg-catching handheld.",
         start_url: "/slop-pogodi/",
         scope: "/slop-pogodi/",
         display: "standalone",

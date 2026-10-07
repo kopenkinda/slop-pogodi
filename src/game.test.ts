@@ -1,8 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { EggGame } from "./game.js";
+import { EggGame, type GameEvent } from "./game.ts";
 
-function advance(game, seconds, beforeStep = () => {}) {
+function advance(
+  game: EggGame,
+  seconds: number,
+  beforeStep: () => void = () => {},
+): void {
   for (let t = 0; t < seconds; t += 1 / 60) {
     beforeStep();
     game.update(1 / 60);
@@ -11,7 +15,7 @@ function advance(game, seconds, beforeStep = () => {}) {
 
 test("an egg is caught only at its ramp end, with the correct basket position", () => {
   for (let lane = 0; lane < 4; lane++) {
-    const events = [];
+    const events: GameEvent[] = [];
     const game = new EggGame({
       random: () => (lane + 0.3) / 4,
       onEvent: (event) => events.push(event),
@@ -27,7 +31,9 @@ test("an egg is caught only at its ramp end, with the correct basket position", 
     advance(game, 2);
     assert.equal(game.score, 1);
     assert.equal(game.misses, 0);
-    assert.equal(events.find((event) => event.type === "catch").egg.lane, lane);
+    const caught = events.find((event) => event.type === "catch");
+    assert.equal(caught?.type, "catch");
+    assert.equal(caught?.egg.lane, lane);
   }
 });
 
@@ -50,7 +56,7 @@ test("golden eggs use a 5% chance and travel twice as fast as white eggs", () =>
 });
 
 test("a five-point catch reports crossing a level, and a missed golden egg costs one life", () => {
-  const events = [];
+  const events: GameEvent[] = [];
   const game = new EggGame({
     random: () => 0.01,
     onEvent: (event) => events.push(event),
@@ -62,8 +68,9 @@ test("a five-point catch reports crossing a level, and a missed golden egg costs
   assert.equal(game.score, 13);
   assert.equal(game.level, 2);
   const caught = events.find((event) => event.type === "catch");
-  assert.equal(caught.points, 5);
-  assert.equal(caught.levelUp, true);
+  assert.equal(caught?.type, "catch");
+  assert.equal(caught?.points, 5);
+  assert.equal(caught?.levelUp, true);
   game.start();
   game.move(3);
   advance(game, 3.8);
@@ -71,8 +78,8 @@ test("a five-point catch reports crossing a level, and a missed golden egg costs
   assert.equal(game.misses, 1);
 });
 
-test("the bonus ending unlocks only after losing with more than 50 points and resets on replay", () => {
-  for (const score of [50, 51]) {
+test("the bonus ending unlocks after losing with 50 points or more and resets on replay", () => {
+  for (const score of [49, 50]) {
     const game = new EggGame({ random: () => 0.4 });
     game.start();
     game.score = score;
@@ -81,7 +88,7 @@ test("the bonus ending unlocks only after losing with more than 50 points and re
       if (game.eggs.length) game.move((game.eggs[0].lane + 2) % 4);
     });
     assert.equal(game.state, "over");
-    assert.equal(game.hasEncore, score > 50);
+    assert.equal(game.hasEncore, score >= 50);
     game.start();
     assert.equal(game.hasEncore, false);
   }

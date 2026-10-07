@@ -1,17 +1,47 @@
 import "./style.css";
-import { EggGame } from "./game.js";
-import { createFarm } from "./scene.js";
+import { EggGame, type GameEvent } from "./game.ts";
+import { createFarm } from "./scene.ts";
+import type { Farm } from "./types.ts";
 
-const $ = (selector) => document.querySelector(selector);
+/** Query a required element. Missing markup is a build error, so fail loudly. */
+function $<T extends HTMLElement = HTMLElement>(selector: string): T {
+  const element = document.querySelector<T>(selector);
+  if (!element) throw new Error(`Missing element: ${selector}`);
+  return element;
+}
 const scoreEl = $("#score"),
   bestEl = $("#best"),
   livesEl = $("#lives");
 const startPanel = $("#start-panel"),
   overlay = $("#overlay"),
-  dialog = $("#help-dialog");
-const laneButtons = [...document.querySelectorAll("[data-lane]")];
+  dialog = $<HTMLDialogElement>("#help-dialog");
+const laneButtons = [
+  ...document.querySelectorAll<HTMLButtonElement>("[data-lane]"),
+];
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+declare global {
+  interface Window {
+    __wolf?: {
+      game: EggGame;
+      readonly farm: Farm | undefined;
+      step(dt?: number, frames?: number): void;
+      feedback: typeof feedback;
+      showLevelBanner: typeof showLevelBanner;
+      flashStage: typeof flashStage;
+    };
+    webkitAudioContext?: typeof AudioContext;
+  }
+  interface Navigator {
+    standalone?: boolean;
+  }
+}
 const eggIcon =
-  '<svg viewBox="0 0 20 28" aria-hidden="true"><path d="M10 2C6 2 2 12 2 18a8 8 0 0 0 16 0C18 12 14 2 10 2Z"/><path d="M5 18c0 3 1 4 3 5" fill="none" opacity=".6"/></svg>';
+  '<svg viewBox="0 0 20 28" aria-hidden="true"><path d="M10 2C6 2 2 12 2 18a8 8 0 0 0 16 0C18 12 14 2 10 2Z"/><path d="M5 18c0 3 1 4 3 5" fill="none" opacity=".6"/><path class="crack" d="m4 14 3 2 2-3 3 3 2-2 2 3" fill="none"/></svg>';
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const soundOnIcon =
   '<svg viewBox="0 0 24 24"><path d="m11 5-6 4H2v6h3l6 4V5Zm4 3a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></svg>';
 const soundOffIcon =
@@ -22,30 +52,30 @@ $(".basket-icon").innerHTML = basketIcon;
 $(".egg-icon").innerHTML =
   '<svg viewBox="0 0 24 24"><path d="M12 2c-4 0-8 9-8 14a8 8 0 0 0 16 0c0-5-4-14-8-14Z"/><path d="m5 14 4-2 3 4 3-3 4 2"/></svg>';
 
-function readStorage(key, fallback) {
+function readStorage(key: string, fallback: string): string {
   try {
     return localStorage.getItem(key) ?? fallback;
   } catch {
     return fallback;
   }
 }
-function saveStorage(key, value) {
+function saveStorage(key: string, value: string | number): void {
   try {
     localStorage.setItem(key, String(value));
   } catch {
     /* Play still works when storage is unavailable. */
   }
 }
-let best = Math.max(0, Number(readStorage("wolf-best", 0)) || 0);
+let best = Math.max(0, Number(readStorage("wolf-best", "0")) || 0);
 let soundEnabled = readStorage("wolf-sound", "on") === "on";
-let audio,
-  farm,
-  feedbackTimer,
-  encoreTime = null,
+let audio: AudioContext | undefined,
+  farm: Farm | undefined,
+  feedbackTimer: ReturnType<typeof setTimeout> | undefined,
+  encoreTime: number | null = null,
   resumeAfterHelp = false,
   loadFailed = false,
   roundBestBefore = best;
-const formatScore = (value) => String(value).padStart(3, "0");
+const formatScore = (value: number) => String(value).padStart(3, "0");
 bestEl.textContent = formatScore(best);
 
 let themeTurn = document.documentElement.dataset.theme === "dark" ? 180 : 0;
@@ -66,7 +96,9 @@ function updateTheme() {
     `Switch to ${dark ? "light" : "dark"} mode`,
   );
   $("#theme").setAttribute("aria-pressed", String(dark));
-  $("meta[name='theme-color']").content = dark ? "#141c24" : "#f6f5ee";
+  $<HTMLMetaElement>("meta[name='theme-color']").content = dark
+    ? "#141c24"
+    : "#f6f5ee";
   farm?.setTheme(dark);
 }
 $("#theme").addEventListener("click", () => {
@@ -91,16 +123,16 @@ function updateDisplayMode() {
 standaloneDisplay.addEventListener("change", updateDisplayMode);
 updateDisplayMode();
 
-let installPrompt;
+let installPrompt: BeforeInstallPromptEvent | null = null;
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
-  installPrompt = event;
+  installPrompt = event as BeforeInstallPromptEvent;
 });
 window.addEventListener("appinstalled", () => {
   installPrompt = null;
   $("#install").hidden = true;
 });
-const installDialog = $("#install-dialog");
+const installDialog = $<HTMLDialogElement>("#install-dialog");
 $("#install").addEventListener("click", async () => {
   game.pause();
   if (installPrompt) {
@@ -124,20 +156,21 @@ $("#install-done").addEventListener("click", () => installDialog.close());
 function unlockAudio() {
   if (!soundEnabled) return;
   try {
-    if (!audio)
-      audio = new (window.AudioContext || window.webkitAudioContext)();
+    const Context = window.AudioContext || window.webkitAudioContext;
+    if (!Context) return;
+    if (!audio) audio = new Context();
     if (audio.state === "suspended") audio.resume().catch(() => {});
   } catch {
     /* Sound is optional on browsers without Web Audio. */
   }
 }
 function tone(
-  frequency,
+  frequency: number,
   duration = 0.09,
   delay = 0,
-  type = "sine",
+  type: OscillatorType = "sine",
   volume = 0.045,
-) {
+): void {
   if (!soundEnabled || !audio || audio.state !== "running") return;
   const oscillator = audio.createOscillator(),
     gain = audio.createGain();
@@ -176,35 +209,157 @@ $("#sound").addEventListener("click", () => {
   }
 });
 
-function feedback(text, miss = false, golden = false) {
-  clearTimeout(feedbackTimer);
-  $("#feedback").textContent = text;
-  $("#feedback").className =
-    `feedback visible${miss ? " miss" : ""}${golden ? " golden" : ""}`;
-  feedbackTimer = setTimeout(() => {
-    $("#feedback").className = "feedback";
-  }, 1000);
+// Toasts sit near the lane they describe: left or right half, upper or lower ramp.
+// Notes sit in the sky strip at the top of the stage, on the side of the lane
+// they describe, so they never cover a ramp or the basket.
+const laneAnchor = (lane?: number): [string, string] =>
+  lane === undefined ? ["50%", "9%"] : [lane < 2 ? "28%" : "72%", "9%"];
+let deltaTimer: ReturnType<typeof setTimeout> | undefined;
+function scoreDelta(points: number, golden: boolean): void {
+  const el = $("#score-delta");
+  clearTimeout(deltaTimer);
+  el.className = "score-delta";
+  void el.offsetWidth;
+  el.textContent = `+${points}`;
+  el.className = `score-delta show${golden ? " gold" : ""}`;
+  deltaTimer = setTimeout(() => {
+    el.className = "score-delta";
+  }, 950);
 }
+let feedbackLeaveTimer: ReturnType<typeof setTimeout> | undefined;
+interface FeedbackOptions {
+  miss?: boolean;
+  golden?: boolean;
+  level?: boolean;
+  lane?: number;
+}
+function feedback(
+  text: string,
+  { miss = false, golden = false, level = false, lane }: FeedbackOptions = {},
+): void {
+  clearTimeout(feedbackTimer);
+  clearTimeout(feedbackLeaveTimer);
+  const el = $("#feedback");
+  const [x, y] = laneAnchor(lane);
+  el.style.setProperty("--fx", x);
+  el.style.setProperty("--fy", y);
+  el.textContent = text;
+  // Restart the entrance animation even when the same class set is reused.
+  el.className = "feedback";
+  void el.offsetWidth;
+  el.className = `feedback visible${miss ? " miss" : ""}${golden ? " golden" : ""}${level ? " level" : ""}`;
+  feedbackTimer = setTimeout(
+    () => {
+      el.classList.add("leaving");
+      feedbackLeaveTimer = setTimeout(() => {
+        el.className = "feedback";
+      }, 400);
+    },
+    golden || level ? 1400 : 900,
+  );
+}
+function clearFeedback() {
+  clearTimeout(feedbackTimer);
+  clearTimeout(feedbackLeaveTimer);
+  $("#feedback").className = "feedback";
+}
+let bannerTimer: ReturnType<typeof setTimeout> | undefined;
+function showLevelBanner(level: number): void {
+  const banner = $("#level-banner");
+  clearTimeout(bannerTimer);
+  banner.hidden = true;
+  $("#level-banner-title").textContent = String(level).padStart(2, "0");
+  void banner.offsetWidth;
+  banner.hidden = false;
+  bannerTimer = setTimeout(() => {
+    banner.hidden = true;
+  }, 2100);
+}
+function flashStage(kind: "flash-miss" | "flash-gold"): void {
+  const stage = $("#stage");
+  stage.classList.remove("flash-miss", "flash-gold");
+  void stage.offsetWidth;
+  stage.classList.add(kind);
+  stage.addEventListener(
+    "animationend",
+    () => stage.classList.remove(kind),
+    { once: true },
+  );
+}
+function buzz(pattern: number | number[]): void {
+  try {
+    if (soundEnabled && navigator.vibrate) navigator.vibrate(pattern);
+  } catch {
+    /* Haptics are a bonus. */
+  }
+}
+// The score counts up instead of jumping, so a golden egg reads as five quick ticks.
+let shownScore = 0,
+  scoreTween = 0;
+function animateScore(target: number): void {
+  cancelAnimationFrame(scoreTween);
+  const from = shownScore;
+  if (reducedMotion.matches || target < from || target - from === 1) {
+    shownScore = target;
+    scoreEl.textContent = formatScore(target);
+    return;
+  }
+  const duration = Math.min(600, 120 + (target - from) * 90);
+  const started = performance.now();
+  const tick = (now: number) => {
+    const t = Math.min(1, (now - started) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    shownScore = Math.round(from + (target - from) * eased);
+    scoreEl.textContent = formatScore(shownScore);
+    if (t < 1) scoreTween = requestAnimationFrame(tick);
+  };
+  scoreTween = requestAnimationFrame(tick);
+}
+let shownMisses = 0;
 function updateStats() {
-  scoreEl.textContent = formatScore(game.score);
+  animateScore(game.score);
   bestEl.textContent = formatScore(best);
-  livesEl.innerHTML = Array.from({ length: 3 }, (_, i) =>
-    i >= 3 - game.misses
-      ? eggIcon.replace("<svg ", '<svg class="lost" ')
-      : eggIcon,
-  ).join("");
+  const lostNow = game.misses > shownMisses;
+  livesEl.innerHTML = Array.from({ length: 3 }, (_, i) => {
+    const lost = i >= 3 - game.misses;
+    const justLost = lostNow && i === 3 - game.misses;
+    return lost
+      ? eggIcon.replace(
+          "<svg ",
+          `<svg class="lost${justLost ? " cracking" : ""}" `,
+        )
+      : eggIcon;
+  }).join("");
+  shownMisses = game.misses;
   livesEl.setAttribute(
     "aria-label",
     `${Math.max(0, 3 - game.misses)} lives remaining`,
   );
+  const tag = $("#scene-level");
+  const levelText = String(game.level).padStart(2, "0");
+  if (tag.textContent !== levelText) {
+    tag.textContent = levelText;
+    tag.classList.remove("tick");
+    void tag.offsetWidth;
+    tag.classList.add("tick");
+  }
 }
 function updateState() {
+  if (game.state !== "playing" && shownScore !== game.score) {
+    cancelAnimationFrame(scoreTween);
+    shownScore = game.score;
+    scoreEl.textContent = formatScore(game.score);
+  }
   startPanel.hidden = game.state !== "ready";
   const encore = encoreTime !== null;
   overlay.hidden = encore || (game.state !== "paused" && game.state !== "over");
   $("#cinematic").hidden = !encore;
   $("#stage").classList.toggle("is-encore", encore);
-  $("#pause").disabled = game.state === "ready" || game.state === "over";
+  const shell = $(".game-shell");
+  for (const state of ["ready", "playing", "paused", "over"] as const)
+    shell.classList.toggle(`is-${state}`, game.state === state && !encore);
+  $<HTMLButtonElement>("#pause").disabled =
+    game.state === "ready" || game.state === "over";
   $("#pause").setAttribute(
     "aria-label",
     game.state === "paused" ? "Resume game" : "Pause game",
@@ -214,38 +369,47 @@ function updateState() {
       ? '<svg viewBox="0 0 24 24"><path d="m9 5 10 7-10 7Z"/></svg>'
       : '<svg viewBox="0 0 24 24"><path d="M8 6v12M16 6v12"/></svg>';
   $("#round-label").textContent = encore
-    ? "A SPECIAL DELIVERY"
+    ? "BONUS"
     : game.state === "ready"
-      ? "READY WHEN YOU ARE"
+      ? "READY"
       : game.state === "paused"
-        ? "ON A LITTLE BREAK"
+        ? "PAUSED"
         : game.state === "over"
-          ? "UNTIL NEXT TIME"
-          : `LEVEL ${String(game.level).padStart(2, "0")} · ${game.level < 3 ? "NICE & EASY" : game.level < 6 ? "PICKING UP PACE" : "QUICK PAWS"}`;
+          ? "ROUND OVER"
+          : `LEVEL ${String(game.level).padStart(2, "0")}`;
   $("#bottom-hint").innerHTML =
     game.state === "ready"
-      ? 'PRESS <kbd>SPACE</kbd> TO START <span class="small-dot">·</span> <span class="desktop-hint">Q / A + E / D TO MOVE</span><span class="touch-hint">TAP THE ARROWS TO MOVE</span>'
-      : '<span class="desktop-hint">Q / A + E / D TO MOVE <span class="small-dot">·</span> <kbd>SPACE</kbd> TO PAUSE</span><span class="touch-hint">TAP THE ARROWS TO MOVE</span>';
+      ? '<kbd>SPACE</kbd> START <span class="small-dot">·</span> <span class="desktop-hint">Q / A + E / D MOVE</span><span class="touch-hint">TAP THE ARROWS TO MOVE</span>'
+      : '<span class="desktop-hint">Q / A + E / D MOVE <span class="small-dot">·</span> <kbd>SPACE</kbd> PAUSE</span><span class="touch-hint">TAP THE ARROWS TO MOVE</span>';
+  const card = $(".overlay-card");
+  const description = $("#overlay-description");
   if (game.state === "paused") {
-    $("#overlay-eyebrow").textContent = "TAKE A BREATHER";
-    $("#overlay-title").textContent = "The hens can wait.";
-    $("#overlay-description").textContent = "Your eggs will be right here.";
-    $("#resume").innerHTML = "Back to the farm <span>→</span>";
+    $("#overlay-eyebrow").textContent = "PAUSED";
+    $("#overlay-score").hidden = true;
+    card.classList.remove("is-best");
+    $("#overlay-title").textContent = "Paused";
+    description.hidden = true;
+    $("#resume").textContent = "Resume";
     $("#restart").hidden = false;
   } else if (game.state === "over") {
-    $("#overlay-eyebrow").textContent =
-      game.score > roundBestBefore
-        ? "A NEW PERSONAL BEST"
-        : "THAT'S ALL, YOLKS";
+    const newBest = game.score > roundBestBefore && game.score > 0;
+    $("#overlay-eyebrow").textContent = newBest ? "NEW BEST" : "ROUND OVER";
+    card.classList.toggle("is-best", newBest);
+    $("#overlay-score").hidden = game.score === 0;
+    $("#overlay-score").innerHTML =
+      `${formatScore(game.score)}<small>${game.score === 1 ? "POINT" : "POINTS"} · LEVEL ${String(game.level).padStart(2, "0")}</small>`;
     $("#overlay-title").textContent =
+      game.score === 0 ? "No eggs caught." : "Three eggs missed.";
+    description.hidden = false;
+    description.textContent =
       game.score === 0
-        ? "A little egg practice?"
-        : `${game.score} points. Nice paws.`;
-    $("#overlay-description").textContent =
-      game.score === 0
-        ? "Watch the eggs roll down, then move to the end of their ramp."
-        : `Three eggs got away. Your best is ${best}. The hens are ready for another round.`;
-    $("#resume").innerHTML = "One more round <span>↗</span>";
+        ? "Move the basket to the end of a ramp before the egg gets there."
+        : newBest && roundBestBefore > 0
+          ? `Previous best ${roundBestBefore}.`
+          : newBest
+            ? "First score on the board."
+            : `Best ${best}.`;
+    $("#resume").textContent = "Play again";
     $("#restart").hidden = true;
   }
 }
@@ -258,7 +422,7 @@ function finishEncore() {
 $("#skip-movie").addEventListener("click", finishEncore);
 
 const game = new EggGame({
-  onEvent(event) {
+  onEvent(event: GameEvent) {
     farm?.event(event);
     if (event.type === "catch") {
       if (game.score > best) {
@@ -266,52 +430,49 @@ const game = new EggGame({
         saveStorage("wolf-best", best);
       }
       updateStats();
-      scoreEl.classList.remove("score-pop");
+      scoreEl.classList.remove("score-pop", "gold");
       void scoreEl.offsetWidth;
       scoreEl.classList.add("score-pop");
+      if (event.egg.golden) scoreEl.classList.add("gold");
       tone(740, 0.1);
       tone(990, 0.15, 0.07);
       if (event.levelUp) {
         updateState();
+        showLevelBanner(game.level);
         tone(1320, 0.15, 0.16);
+        tone(1760, 0.2, 0.26, "sine", 0.035);
       }
       if (event.egg.golden) {
-        feedback(
-          event.levelUp ? `+5 GOLDEN! Level ${game.level}` : "+5 GOLDEN!",
-          false,
-          true,
-        );
+        scoreDelta(5, true);
+        flashStage("flash-gold");
+        buzz([12, 40, 18]);
         tone(1480, 0.18, 0.14);
         tone(1760, 0.22, 0.23);
-      } else if (event.levelUp)
-        feedback(`Level ${game.level}. Here come the hens!`);
-      else feedback("+1");
+      } else {
+        scoreDelta(1, false);
+        buzz(8);
+      }
     } else if (event.type === "miss") {
       updateStats();
-      feedback(
-        ["", "One got away!", "Careful. One egg to spare.", "Oh, crumbs."][
-          game.misses
-        ],
-        true,
-      );
+      feedback(game.misses === 2 ? "Missed. Last life." : "Missed", {
+        miss: true,
+        lane: event.egg.lane,
+      });
+      flashStage("flash-miss");
+      buzz(45);
       tone(190, 0.19, 0, "triangle", 0.065);
       tone(130, 0.2, 0.12, "triangle", 0.05);
     } else if (event.type === "spawn") {
       tone(440 + event.egg.lane * 55, 0.06, 0, "sine", 0.013);
-      if (event.egg.golden) {
-        feedback("Golden egg. Quick paws!", false, true);
-        tone(1100, 0.15, 0.06, "sine", 0.03);
-      }
+      if (event.egg.golden) tone(1100, 0.15, 0.06, "sine", 0.03);
     } else {
-      if (event.type === "over" && game.hasEncore) {
-        encoreTime = 0;
-        $("#movie-caption").textContent = "Someone heard about your score.";
-      }
+      if (event.type === "over" && game.hasEncore) encoreTime = 0;
       updateStats();
       updateState();
       if (event.type === "start") {
-        clearTimeout(feedbackTimer);
-        $("#feedback").className = "feedback";
+        clearFeedback();
+        clearTimeout(bannerTimer);
+        $("#level-banner").hidden = true;
         tone(440, 0.1);
         tone(550, 0.1, 0.1);
         tone(660, 0.16, 0.2);
@@ -324,7 +485,7 @@ const game = new EggGame({
   },
 });
 
-function move(lane) {
+function move(lane: number): void {
   if (
     dialog.open ||
     installDialog.open ||
@@ -340,6 +501,11 @@ function move(lane) {
     const selected = Number(button.dataset.lane) === lane;
     button.classList.toggle("active", selected);
     button.setAttribute("aria-pressed", String(selected));
+    if (selected && changed) {
+      button.classList.remove("pressed");
+      void button.offsetWidth;
+      button.classList.add("pressed");
+    }
   }
   if (changed && game.state === "playing")
     tone(260 + lane * 35, 0.04, 0, "sine", 0.014);
@@ -349,6 +515,8 @@ function start() {
   unlockAudio();
   encoreTime = null;
   roundBestBefore = best;
+  shownScore = 0;
+  shownMisses = 0;
   game.start();
   move(1);
 }
@@ -418,7 +586,9 @@ document.addEventListener("keydown", (event) => {
     loadFailed
   )
     return;
-  if (["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)) return;
+  const target = event.target instanceof Element ? event.target : null;
+  if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+    return;
   const key = event.key.toLowerCase();
   if (encoreTime !== null) {
     if (key === " " || key === "escape") {
@@ -429,7 +599,7 @@ document.addEventListener("keydown", (event) => {
   }
   if (key === " " || key === "escape" || key === "p") {
     // Let Space activate a focused button using the browser's normal behavior.
-    if (key === " " && event.target.closest("button, a")) return;
+    if (key === " " && target?.closest("button, a")) return;
     event.preventDefault();
     if (!event.repeat) {
       if (key === "escape") {
@@ -439,7 +609,8 @@ document.addEventListener("keydown", (event) => {
     }
     return;
   }
-  let lane = { q: 0, a: 1, e: 2, d: 3 }[key];
+  const keyLanes: Record<string, number> = { q: 0, a: 1, e: 2, d: 3 };
+  let lane: number | undefined = keyLanes[key];
   if (key === "arrowleft") lane = game.lane % 2;
   if (key === "arrowright") lane = 2 + (game.lane % 2);
   if (key === "arrowup") lane = game.lane < 2 ? 0 : 2;
@@ -467,10 +638,28 @@ updateStats();
 move(1);
 updateState();
 try {
-  farm = createFarm($("#canvas-mount"));
+  const createdFarm = createFarm($("#canvas-mount"));
+  farm = createdFarm;
   updateTheme();
   let previous = performance.now();
-  function frame(now) {
+  // Development hook so a browser without a running frame loop can step the game.
+  if (import.meta.env.DEV)
+    window.__wolf = {
+      game,
+      get farm() {
+        return farm;
+      },
+      step(dt = 1 / 60, frames = 1) {
+        for (let i = 0; i < frames; i++) {
+          previous = performance.now() - dt * 1000;
+          frame(performance.now());
+        }
+      },
+      feedback,
+      showLevelBanner,
+      flashStage,
+    };
+  function frame(now: number): void {
     const dt = Math.min((now - previous) / 1000, 0.1);
     previous = now;
     game.update(dt);
@@ -482,22 +671,18 @@ try {
     ) {
       const previousEncore = encoreTime;
       encoreTime += dt;
-      if (previousEncore < 3.2 && encoreTime >= 3.2)
-        $("#movie-caption").textContent = "Hare mail. One very special egg.";
-      if (previousEncore < 5.4 && encoreTime >= 5.4) {
-        $("#movie-caption").textContent = "Even the hens are impressed.";
+      if (previousEncore < 5.4 && encoreTime >= 5.4)
         [660, 830, 990, 1320].forEach((note, i) => tone(note, 0.22, i * 0.13));
-      }
       if (encoreTime >= 8.5) finishEncore();
     }
-    farm.render(game, dt, now / 1000, encoreTime);
+    createdFarm.render(game, dt, now / 1000, encoreTime);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
   $("#canvas-mount canvas").addEventListener("webglcontextlost", (event) => {
     event.preventDefault();
     game.pause();
-    feedback("The scene needs a refresh.", true);
+    feedback("Graphics context lost. Reload the page.", { miss: true });
   });
 } catch (error) {
   loadFailed = true;
@@ -506,7 +691,7 @@ try {
     button.hidden = true;
   });
   $("#canvas-mount").innerHTML =
-    '<div class="load-error"><h2>The farm couldn\'t load.</h2><p>This game needs WebGL. Try enabling graphics acceleration in your browser, then reload.</p><button class="primary-button" id="reload">Try again</button></div>';
+    '<div class="load-error"><h2>WebGL is unavailable.</h2><p>Enable graphics acceleration in your browser, then reload.</p><button class="primary-button" id="reload">Reload</button></div>';
   $("#reload").addEventListener("click", () => location.reload());
   console.error("Unable to create the 3D farm:", error);
 }

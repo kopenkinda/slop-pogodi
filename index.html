@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#f4f3eb" />
+    <meta name="theme-color" content="#f6f5ee" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
       name="apple-mobile-web-app-status-bar-style"
@@ -33,9 +33,9 @@
     </script>
     <meta
       name="description"
-      content="Quick paws, four hens, and a basket. Play a 3D reimagining of the classic Nu, Pogodi! egg-catching game."
+      content="A 3D remake of the Elektronika egg-catching handheld. Catch eggs from four ramps. Three misses end the round."
     />
-    <title>Nu, Pogodi! · The egg-catching classic, in 3D</title>
+    <title>Nu, Pogodi! 3D</title>
     <link rel="icon" type="image/svg+xml" href="/egg.svg" />
   </head>
   <body>
@@ -72,18 +72,17 @@
       </header>
       <main>
         <section class="intro">
-          <div class="eyebrow">
-            <span></span> A LITTLE NOSTALGIA. A WHOLE NEW DIMENSION.
-          </div>
-          <h1>Good eggs. <em>Quick paws.</em></h1>
-          <p>Four hens. One wolf. Don't let breakfast hit the ground.</p>
+          <h1>Catch the eggs.</h1>
+          <p>A 3D remake of the 1984 Elektronika handheld.</p>
         </section>
         <section class="game-shell" aria-label="Egg-catching game">
           <div class="game-hud">
             <div class="stats">
-              <div class="stat">
+              <div class="stat score-stat">
                 <span class="stat-label">SCORE</span
-                ><strong id="score">000</strong>
+                ><strong id="score">000</strong
+                ><span id="score-delta" class="score-delta" aria-hidden="true"
+                ></span>
               </div>
               <span class="stat-divider"></span>
               <div class="stat best-stat">
@@ -93,16 +92,16 @@
                       d="M8 3h8v7a4 4 0 0 1-8 0V3Zm0 2H4v3a4 4 0 0 0 4 4m8-7h4v3a4 4 0 0 1-4 4m-4 2v6m-4 1h8"
                     />
                   </svg>
-                  PERSONAL BEST</span
+                  BEST</span
                 ><strong id="best">000</strong>
               </div>
             </div>
             <div class="hud-center">
               <span class="status-dot"></span
-              ><span id="round-label">A DAY AT THE FARM</span>
+              ><span id="round-label">READY</span>
             </div>
             <div class="life-group">
-              <div class="stat-label">EGGS TO SPARE</div>
+              <div class="stat-label">LIVES</div>
               <div id="lives" aria-label="3 lives remaining"></div>
             </div>
             <div id="game-actions" class="game-actions">
@@ -118,18 +117,18 @@
           </div>
           <div id="stage" class="stage">
             <div class="scene-tag">
-              <span class="live-dot"></span> THE COOP <span>01</span>
+              <span class="live-dot"></span> LEVEL
+              <span id="scene-level">01</span>
             </div>
             <div id="canvas-mount"></div>
             <div id="feedback" class="feedback" aria-live="polite"></div>
+            <div id="level-banner" class="level-banner" hidden aria-live="polite">
+              <span class="level-banner-eyebrow">LEVEL</span>
+              <strong id="level-banner-title">02</strong>
+            </div>
             <div id="cinematic" class="cinematic" hidden>
-              <span class="cinematic-title">A LITTLE SOMETHING EXTRA</span>
-              <button id="skip-movie" aria-label="Skip movie">
-                Skip <span>→</span>
-              </button>
-              <p id="movie-caption" aria-live="polite">
-                Someone heard about your score.
-              </p>
+              <span class="cinematic-title">BONUS</span>
+              <button id="skip-movie">Skip</button>
             </div>
             <div class="lane-controls left-controls">
               <button data-lane="0" aria-label="Catch upper left">
@@ -147,72 +146,61 @@
             </div>
             <div id="start-panel" class="start-panel">
               <div class="start-copy">
-                <strong>A basketful of good old days.</strong
-                ><span>Golden eggs are worth 5. Catch them quick.</span>
+                <strong>Move the basket. Catch the eggs.</strong
+                ><span>Golden eggs score five and fall twice as fast.</span>
               </div>
               <button id="start" class="primary-button">
                 <svg viewBox="0 0 24 24"><path d="m9 5 10 7-10 7Z" /></svg>
-                Let's play <span>↗</span>
+                Play
               </button>
             </div>
             <div id="overlay" class="overlay" hidden>
               <div class="overlay-card">
-                <span id="overlay-eyebrow" class="eyebrow"
-                  >TAKE A BREATHER</span
-                >
-                <h2 id="overlay-title">The hens can wait.</h2>
-                <p id="overlay-description">Your eggs will be right here.</p>
-                <button id="resume" class="primary-button">
-                  Back to the farm <span>→</span></button
-                ><button id="restart" class="text-button">
-                  Start a new round
-                </button>
+                <span id="overlay-eyebrow" class="eyebrow">PAUSED</span>
+                <div id="overlay-score" class="overlay-score" hidden>
+                  000<small>POINTS</small>
+                </div>
+                <h2 id="overlay-title">Paused</h2>
+                <p id="overlay-description" hidden></p>
+                <button id="resume" class="primary-button">Resume</button
+                ><button id="restart" class="text-button">Restart</button>
               </div>
             </div>
           </div>
           <div class="game-bottom">
-            <span
-              ><span class="tiny-egg"></span> Simple game. Surprisingly
-              tricky.</span
-            ><span id="bottom-hint"
-              >PRESS <kbd>SPACE</kbd> TO START <span class="small-dot">·</span>
-              <span class="desktop-hint">Q / A + E / D TO MOVE</span
+            <span id="bottom-hint"
+              ><kbd>SPACE</kbd> START <span class="small-dot">·</span>
+              <span class="desktop-hint">Q / A + E / D MOVE</span
               ><span class="touch-hint">TAP THE ARROWS TO MOVE</span></span
             >
           </div>
         </section>
-        <section class="instructions" aria-label="Quick instructions">
+        <section class="instructions" aria-label="Rules">
           <div>
             <span class="instruction-icon keys-icon">↖</span>
             <p>
-              <strong>Find your corner</strong
-              ><span>Use Q / A and E / D, or tap the arrows.</span>
+              <strong>Controls</strong
+              ><span>Q / A and E / D, the arrow keys, or the on-screen arrows.</span>
             </p>
           </div>
           <div>
             <span class="instruction-icon basket-icon">♧</span>
             <p>
-              <strong>Catch every egg</strong
-              ><span>Move the basket before the egg drops.</span>
+              <strong>Scoring</strong
+              ><span>White eggs 1 point. Golden eggs 5, twice as fast.</span>
             </p>
           </div>
           <div>
             <span class="instruction-icon egg-icon">♧</span>
             <p>
-              <strong>Stay on your paws</strong
-              ><span>Three misses and it's back to the coop.</span>
+              <strong>Misses</strong><span>Three end the round.</span>
             </p>
           </div>
         </section>
       </main>
       <footer>
-        <span
-          >INSPIRED BY ЭЛЕКТРОНИКА ИМ-02 <span class="small-dot">·</span> EST.
-          1984</span
-        ><span
-          >A familiar little game, with a little more depth.
-          <span class="footer-flower">✳</span></span
-        >
+        <span>After the Elektronika IM-02 handheld, 1984. Fan project.</span
+        ><a href="https://github.com/kopenkinda/slop-pogodi">Source</a>
       </footer>
     </div>
     <dialog id="help-dialog" aria-labelledby="help-title">
@@ -221,12 +209,12 @@
         class="close-button"
         aria-label="Close instructions"
       >
-        ×</button
-      ><span class="eyebrow">THE ORIGINAL EGG RUN</span>
-      <h2 id="help-title">All paws on deck.</h2>
+        ×
+      </button>
+      <h2 id="help-title">How to play</h2>
       <p>
-        Eggs roll down four ramps. Put your basket under the right ramp before
-        an egg reaches the end.
+        Eggs roll down four ramps. Move the basket to the end of a ramp before
+        its egg gets there.
       </p>
       <div class="key-guide">
         <div><kbd>Q</kbd><span>Upper left</span></div>
@@ -235,20 +223,18 @@
         <div><kbd>D</kbd><span>Lower right</span></div>
       </div>
       <p>
-        You can also use the arrow keys to choose a side and height, or tap the
-        four on-screen buttons.
+        Arrow keys also work: left and right pick a side, up and down pick a
+        ramp. On a phone, tap the four arrows.
       </p>
       <p>
-        White eggs earn 1 point. Rare golden eggs earn 5 points and move twice
-        as fast. They have a 5% chance of appearing. Three missed eggs end the
-        round. The hens get faster every ten points.
+        White eggs score 1. Golden eggs score 5, appear 5% of the time, and
+        fall twice as fast. Three misses end the round. Eggs speed up every ten
+        points.
       </p>
       <div class="help-note">
         <kbd>SPACE</kbd> Start / pause <span>·</span> <kbd>ESC</kbd> Pause
       </div>
-      <button id="got-it" class="primary-button">
-        Got it. Let's catch some eggs. <span>→</span>
-      </button>
+      <button id="got-it" class="primary-button" autofocus>Got it</button>
     </dialog>
     <dialog id="install-dialog" aria-labelledby="install-title">
       <button
@@ -258,19 +244,16 @@
       >
         ×
       </button>
-      <span class="eyebrow">A POCKET-SIZED FARM</span>
-      <h2 id="install-title">Take the hens with you.</h2>
+      <h2 id="install-title">Install the game</h2>
       <p id="install-instructions">
         Open your browser's menu and choose Install app or Add to Home Screen.
       </p>
       <p>
-        The installed game opens with just the farm and its controls. After your
-        first visit, it works offline too.
+        The installed app shows only the game and works offline after the first
+        visit.
       </p>
-      <button id="install-done" class="primary-button">
-        Got it <span>→</span>
-      </button>
+      <button id="install-done" class="primary-button" autofocus>Done</button>
     </dialog>
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

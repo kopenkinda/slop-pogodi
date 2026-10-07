@@ -2,11 +2,11 @@
 
 [![Nu, Pogodi! 3D cover art with the wolf, four hens, a golden egg, and a day-to-night sky.](docs/assets/preview.webp)](https://kopenkinda.github.io/slop-pogodi/)
 
-A 3D fan remake of the classic egg-catching game. Move the wolf's basket between four ramps and catch breakfast before it hits the ground.
+A 3D fan remake of the classic egg-catching game. Move the wolf's basket between four ramps and catch the eggs before they hit the ground.
 
 [Play the game](https://kopenkinda.github.io/slop-pogodi/) · [Read the build conversation](SLOP-CHAT.md)
 
-Built with vanilla JavaScript, Three.js, and Vite. The farm, characters, eggs, and sound effects are generated in code. Fonts are bundled locally. No backend, model downloads, or API keys are needed.
+Built with TypeScript, Three.js, and Vite. The farm, characters, eggs, and sound effects are generated in code. Fonts are bundled locally. No backend, model downloads, or API keys are needed.
 
 ## How to play
 
@@ -35,9 +35,9 @@ The theme dial switches between day and night. The sun and moon follow a circula
 <details>
 <summary>The Easter egg</summary>
 
-Lose with more than 50 points to unlock a bonus scene. A rabbit hops onto the farm and tosses an oversized golden egg into the wolf's basket, then the wolf and hens celebrate.
+Lose with 50 points or more to unlock a bonus scene. A rabbit hops onto the farm and tosses an oversized golden egg into the wolf's basket, then the wolf and hens celebrate.
 
-The scene lasts 8.5 seconds. Skip it with the on-screen button, Space, or Escape. A score of exactly 50 does not unlock it.
+The scene lasts 8.5 seconds. Skip it with the on-screen button, Space, or Escape.
 
 </details>
 
@@ -64,6 +64,7 @@ npm run dev
 Open the URL printed by Vite. The app uses the `/slop-pogodi/` path locally and in production. A browser with WebGL support is required.
 
 ```sh
+npm run check  # TypeScript type check
 npm test       # Gameplay checks using Node's built-in test runner
 npm run build  # Production bundle in dist/
 npm run preview
@@ -75,19 +76,21 @@ To check installation and offline behavior locally, use the production preview. 
 
 | File | Responsibility |
 | --- | --- |
-| [src/game.js](src/game.js) | Gameplay rules, spawning, catches, scoring, difficulty, and round state |
-| [src/scene.js](src/scene.js) | Procedural Three.js models, lighting, animation, and the bonus scene |
-| [src/main.js](src/main.js) | Input, interface, audio, saved preferences, and install controls |
+| [src/game.ts](src/game.ts) | Gameplay rules, spawning, catches, scoring, difficulty, and round state |
+| [src/scene.ts](src/scene.ts) | Procedural Three.js models, lighting, animation, and the bonus scene |
+| [src/main.ts](src/main.ts) | Input, interface, audio, saved preferences, and install controls |
+| [src/types.ts](src/types.ts) | The `Farm` contract between the interface and the scene |
 | [src/style.css](src/style.css) | Themes, responsive layout, and the minimal installed interface |
 | [index.html](index.html) | Page structure, game controls, and dialogs |
-| [src/game.test.js](src/game.test.js) | Catching, golden eggs, level changes, bonus ending, pause, and restart checks |
+| [src/game.test.ts](src/game.test.ts) | Catching, golden eggs, level changes, bonus ending, pause, and restart checks |
+| [tsconfig.json](tsconfig.json) | Strict TypeScript settings; `npm run check` type-checks without emitting |
 | [public/](public/) | App icons, bundled fonts, and font licenses |
 | [vite.config.js](vite.config.js) | Build path, PWA manifest, and offline caching |
 | [.github/workflows/deploy.yml](.github/workflows/deploy.yml) | GitHub Pages deployment |
 
 ## Deployment
 
-Every push to `main` in [kopenkinda/slop-pogodi](https://github.com/kopenkinda/slop-pogodi) installs dependencies, runs the gameplay tests, builds the site, and deploys `dist/` to GitHub Pages.
+Every push to `main` in [kopenkinda/slop-pogodi](https://github.com/kopenkinda/slop-pogodi) installs dependencies, type-checks, runs the gameplay tests, builds the site, and deploys `dist/` to GitHub Pages.
 
 The Vite base path and the PWA manifest's ID, start URL, and scope are set to `/slop-pogodi/` for this repository.
 
